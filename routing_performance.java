@@ -23,9 +23,19 @@ public class routing_performance {
 
   public static Map<Character, Integer> distances;
 
+  // First Character is child, second is parent
+  // e.g. path.get(D) returns B, (ie quickest to get to D from B
+  public static Map<Character, Character> path;
+
+  public static int numVCRequests = 0;
+  public static int numSuccessRequests = 0;
+  public static int percentageSuccessRequests = 0;
+  public static int numBlockedRequests = 0;
+  public static int percentageBlockedRequests = 0;
+
   public static void main(String[] args) {
 
-    int numVCRequests = 0;
+    //int numVCRequests = 0;
     //Graph g = new Graph(args[1]);
     readGraph(args[1]);  
 
@@ -46,10 +56,14 @@ public class routing_performance {
     }
 
     System.out.println("total number of virtual circuit requests: " + numVCRequests);
-    System.out.println("number of successfully routed requests: 100");
-    System.out.println("percentage of successfully routed request: 50");
-    System.out.println("number of blocked requests: 100");
-    System.out.println("percentage of blocked requests: 50");
+    numSuccessRequests = numVCRequests;
+    System.out.println("number of successfully routed requests: " + numSuccessRequests);
+    System.out.println("percentage of successfully routed request: " + (numSuccessRequests/numVCRequests * 100));
+    System.out.println("number of blocked requests: " + numBlockedRequests);
+    System.out.println("percentage of blocked requests: " + percentageBlockedRequests);
+
+
+
   }
 
   public static void readGraph (String file) {
@@ -98,7 +112,7 @@ public class routing_performance {
     try {
       BufferedReader br = new BufferedReader(new FileReader(file));
       String line;
-      int numVCRequests = 0;
+      //int numVCRequests = 0;
       System.out.println("Printing workload");
       while ((line = br.readLine()) != null) {
         String[] specs = line.split(" ");
@@ -112,7 +126,7 @@ public class routing_performance {
         numVCRequests++;
       }
       br.close();
-      System.out.println("total number of virtual circuit requests: " + numVCRequests);
+      //System.out.println("total number of virtual circuit requests: " + numVCRequests);
     }
     catch (Exception e) {
       System.err.println(e.getMessage()); // handle exception
@@ -128,9 +142,11 @@ public class routing_performance {
 
     usedNodes = new HashSet<Character>();
     unusedNodes = new HashSet<Character>();
+    
 
     unusedNodes.add(srcNode);
     distances = new HashMap<Character, Integer>();
+    path = new HashMap<Character, Character>();
     initialiseDistances();
     distances.put(srcNode, 0);
 
@@ -148,10 +164,18 @@ public class routing_performance {
     }
 
     System.out.println("distance from " + srcNode + " to " + destNode + " : " + distances.get(destNode));
+    char n = destNode;
+    System.out.println("Path from " + srcNode + " to " + destNode);
+    while (path.get(n) != null) {
+      System.out.print(n + "<-");
+      n = path.get(n);
+    }
+    System.out.println(srcNode);
 
     usedNodes = null;
     unusedNodes = null;
     distances = null;
+    path = null;
   }
 
   public static void initialiseDistances() {
@@ -200,6 +224,7 @@ public class routing_performance {
         if (newdistance < distances.get(e.destNode)) {
           distances.put(e.destNode, newdistance);
           unusedNodes.add(e.destNode);
+          path.put(e.destNode, srcNode); // ie you get to e.destNode from srcNode
         }
         
   
