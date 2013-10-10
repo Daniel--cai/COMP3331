@@ -2,6 +2,7 @@ import java.io.*;
 import java.net.*;
 import java.util.*;
 import java.lang.Object;
+import java.math.BigDecimal;
 
 //http://www.vogella.com/articles/JavaAlgorithmsDijkstra/article.html
 
@@ -86,7 +87,6 @@ public class routing_performance {
     nodes = new ArrayList<Character>();
     edgeMap = new HashMap<Pair, Edge>();
 
-
 /*
     for (char ch = 'A'; ch <= 'Z'; ++ch) {
       graph.put(ch, new LinkedList<Edge>());
@@ -134,7 +134,7 @@ public class routing_performance {
 
 
         graph.get(node).add(e1); 
-        graph.get(adjNode).add(e2); // dont copy both directions to graph?
+        graph.get(adjNode).add(e2); // dont copy both directions to graph? 
         //System.out.println(line);
         //numVCRequests++;
         
@@ -147,8 +147,40 @@ public class routing_performance {
 
   }
 
-  public static void SHP (String file) {
+  //TODO: make edgepath as return for Djkstra()
+  public static List<Pair> finalEdgePath;
 
+  public static void updateWorkLoad(int expired, int duration){
+    Pair p;
+    Edge edge = null;
+    boolean blocked = false;         
+    ListIterator it = finalEdgePath.listIterator();  
+    while (it.hasNext()){
+      p = (Pair)it.next();
+      edge = edgeMap.get(p);
+      edge.update(expired);
+      if (edge.isBlocked()){
+        blocked = true;
+        System.out.println("Blocked at " + p.first + " " + p.second);
+      }
+    }
+    if (!blocked) {
+      it = finalEdgePath.listIterator();  
+      while (it.hasNext()){
+        p = (Pair)it.next();
+        edge = edgeMap.get(p);
+        edge.request(duration);
+      }
+        numSuccessRequests++;
+      } else {
+        numBlockedRequests++;
+      }
+    numVCRequests++;
+  }
+
+  public static void SHP (String file) {
+    finalEdgePath = new ArrayList<Pair>();
+    int currtime = 0;
     try {
       BufferedReader br = new BufferedReader(new FileReader(file));
       String line;
@@ -159,11 +191,16 @@ public class routing_performance {
         //System.out.println("specs[0]: " + specs[0]);
         char srcNode = specs[1].charAt(0);
         char destNode = specs[2].charAt(0);
+        finalEdgePath.clear();
         Dijkstra(srcNode, destNode);
-      
-
-        System.out.println(line);
-        numVCRequests++;
+        BigDecimal a = new BigDecimal(specs[0]).multiply(new BigDecimal("1000000."));
+        BigDecimal b = new BigDecimal(specs[3]).multiply(new BigDecimal("1000000."));
+        int expired = a.intValue() - currtime;
+        int duration = b.intValue();
+        currtime = a.intValue();
+        //traverse edges to add to workload
+        updateWorkLoad(expired, duration);
+       
       }
       br.close();
       //System.out.println("total number of virtual circuit requests: " + numVCRequests);
@@ -171,9 +208,6 @@ public class routing_performance {
     catch (Exception e) {
       System.err.println(e.getMessage()); // handle exception
     }
-    
-
-
   }
 
   public static void Dijkstra (char srcNode, char destNode) {
@@ -198,7 +232,7 @@ public class routing_performance {
       unusedNodes.remove(node);
       if (node == destNode) {
         ///////////////////////////////////////////////////
-        numSuccessRequests++;
+        //numSuccessRequests++;
         success = true;
         break;
       }
@@ -207,9 +241,9 @@ public class routing_performance {
       checkAdjacentNodes(node);
       //findMinimalDistances(node);
     }
-    if (!success) {
-      numBlockedRequests++;
-    }
+    //if (!success) {
+    //  numBlockedRequests++;
+    //}
     System.out.println("distance from " + srcNode + " to " + destNode + " : " + distances.get(destNode));
     char n = destNode;
     System.out.println("Path from " + srcNode + " to " + destNode);
@@ -224,8 +258,12 @@ public class routing_performance {
 
     System.out.println("FINAL PATH");
     Collections.reverse(finalPath);
+    char src,dest;
     for (int i = 0; i < finalPath.size()-1; i++) {
       System.out.print(finalPath.get(i) + "->");
+      src = finalPath.get(i);
+      dest = finalPath.get(i+1);
+      finalEdgePath.add((new Pair(src,dest)));
     }
     System.out.println(finalPath.get(finalPath.size()-1));
 
@@ -331,19 +369,49 @@ class Edge {
   public final int delay;
   public final int capacity;
   public int load = 0;
-
+  private List<Integer> workload;
+  
   public Edge (char src, char dest, int d, int c) {
     this.srcNode = src;
     this.destNode = dest;
     this.delay = d;
     this.capacity = c;
+    workload = new LinkedList<Integer>();
   }
 
   public void printEdge () {
     System.out.print(destNode + " " + delay + " " + capacity + " ");
   }
-}
 
+  public boolean isBlocked(){
+    System.out.print("isBlocked load: " + load + " capacity: " +capacity + "\n" );
+    return load >= capacity;  
+  }
+
+  @SuppressWarnings(value = "unchecked")
+  public void update(int expired){
+    ListIterator it = workload.listIterator();
+    while (it.hasNext()){
+      int curr = (Integer)it.next();
+      System.out.print("Updating curr " + curr + " - " + expired + " = " + (curr-expired) + "\n");
+      curr -= expired;
+      if (curr <= 0){
+        it.remove();
+        load--;
+        System.out.print("Released finished load " + srcNode + "->" + destNode +"\n");
+      } else {
+        it.set(curr);
+        
+      }
+    }
+  }
+
+  public void request(int duration){
+    System.out.print("load++ for edge " + srcNode + "->" + destNode + "\n");
+    load++;
+    workload.add(duration);
+  }
+}
 class Pair {
   public final char first;
   public final char second;
@@ -366,6 +434,8 @@ class Pair {
     return hash;
   }
 }
+
+
 /*
 class Node {
   public char name;
