@@ -41,14 +41,15 @@ public class routing_performance {
 
     // printGraph
     for (char ch = 'A'; ch <= 'Z'; ch++) {
-      System.out.print(ch + ": " );
-      for (int i = 0; i < graph.get(ch).size(); i++) {
-        //g.map.get(ch).get(i).printEdge();
-        graph.get(ch).get(i).printEdge();
-      } 
-      System.out.println();
+      if (graph.containsKey(ch)) {
+        System.out.print(ch + ": " );
+        for (int i = 0; i < graph.get(ch).size(); i++) {
+          //g.map.get(ch).get(i).printEdge();
+          graph.get(ch).get(i).printEdge();
+        } 
+        System.out.println();
+      }
     }
-
 
     if (args[0].equals("SHP")) {
       System.out.println("SHP");
@@ -71,13 +72,16 @@ public class routing_performance {
     edges = new ArrayList<Edge>();
     nodes = new ArrayList<Character>();
 
+//////////////////////////////////////////////////////////////////
+/*
     for (char ch = 'A'; ch <= 'Z'; ++ch) {
       graph.put(ch, new LinkedList<Edge>());
       ///Node n = new Node(ch);
       nodes.add(ch);
     }
-
+*/
     try {
+      // read in Topology
       BufferedReader br = new BufferedReader(new FileReader(file));
       String line;
 
@@ -93,6 +97,18 @@ public class routing_performance {
         Edge e2 = new Edge(adjNode, node, delay, capacity);
         edges.add(e);
         edges.add(e2);
+
+        // put nodes in graph and nodes list
+        if (!graph.containsKey(node)) {
+          graph.put(node, new LinkedList<Edge>());
+          nodes.add(node);
+        }
+        if (!graph.containsKey(adjNode)) {
+          graph.put(adjNode, new LinkedList<Edge>());
+          nodes.add(adjNode);
+        }
+
+
         graph.get(node).add(e); 
         graph.get(adjNode).add(e2); // dont copy both directions to graph?
         //System.out.println(line);
@@ -142,7 +158,8 @@ public class routing_performance {
 
     usedNodes = new HashSet<Character>();
     unusedNodes = new HashSet<Character>();
-    
+    List<Character> finalPath = new ArrayList<Character>();
+     
 
     unusedNodes.add(srcNode);
     distances = new HashMap<Character, Integer>();
@@ -167,10 +184,20 @@ public class routing_performance {
     char n = destNode;
     System.out.println("Path from " + srcNode + " to " + destNode);
     while (path.get(n) != null) {
+      finalPath.add(n);
       System.out.print(n + "<-");
       n = path.get(n);
     }
+
     System.out.println(srcNode);
+    finalPath.add(srcNode);
+
+    System.out.println("FINAL PATH");
+    Collections.reverse(finalPath);
+    for (int i = 0; i < finalPath.size()-1; i++) {
+      System.out.print(finalPath.get(i) + "->");
+    }
+    System.out.println(finalPath.get(finalPath.size()-1));
 
     usedNodes = null;
     unusedNodes = null;
