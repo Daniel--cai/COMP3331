@@ -15,6 +15,7 @@ public class routing_performance {
   
   // Max propagation delay 
   static final int MAX_DELAY = 200;
+  static final int MAX_CAP   = 100;
   public static String routingProtocol;
 
   // Map of edge lists for each node
@@ -38,6 +39,9 @@ public class routing_performance {
   public static float percentageSuccessRequests = 0;
   public static int numBlockedRequests = 0;
   public static float percentageBlockedRequests = 0;
+  
+  public static List<Integer> averageHops;
+  public static List<Integer> averageCost;
 
   public static void main(String[] args) {
 
@@ -57,28 +61,45 @@ public class routing_performance {
       }
     }
 
+    averageHops = new ArrayList<Integer>();
+    averageCost = new ArrayList<Integer>();
+
     if (args[0].equals("SHP")) {
       System.out.println("SHP");
       routingProtocol = "SHP";
       SHP(args[2]);
-    }
-    else if (args[0].equals("SDP")) {
+    } else if (args[0].equals("SDP")) {
       System.out.println("SDP");
       routingProtocol = "SDP";
+      SHP(args[2]);
+    } else if (args[0].equals("LLP")){
+      System.out.println("LLP");
+      routingProtocol = "LLP";
       SHP(args[2]);
     }
 
     percentageSuccessRequests = ((float)numSuccessRequests/numVCRequests * 100);
     percentageBlockedRequests = ((float)numBlockedRequests/numVCRequests * 100);
+
     System.out.println("total number of virtual circuit requests: " + numVCRequests);
     //numSuccessRequests = numVCRequests;
     System.out.println("number of successfully routed requests: " + numSuccessRequests);
     System.out.println("percentage of successfully routed request: " + (int)percentageSuccessRequests);
     System.out.println("number of blocked requests: " + numBlockedRequests);
     System.out.println("percentage of blocked requests: " + (int)percentageBlockedRequests);
-
-
-
+    
+    float average = 0;
+    if (!averageHops.isEmpty()) {
+      for (Integer val : averageHops)
+        average += val;
+    }
+    System.out.println("average hops of links: " + (int)(average/averageHops.size()));
+    average = 0;
+    if (!averageCost.isEmpty()) {
+      for (Integer val : averageCost)
+        average += val;
+    }
+    System.out.println("average cost of links: " + (int)(average/averageCost.size()));
   }
 
   public static void readGraph (String file) {
@@ -158,23 +179,27 @@ public class routing_performance {
     while (it.hasNext()){
       p = (Pair)it.next();
       edge = edgeMap.get(p);
-      edge.update(expired);
       if (edge.isBlocked()){
         blocked = true;
         System.out.println("Blocked at " + p.first + " " + p.second);
+        break;      
       }
     }
+    int totalDelay = 0;
     if (!blocked) {
-      it = finalEdgePath.listIterator();  
+      it = finalEdgePath.listIterator();
+      averageHops.add(finalEdgePath.size());
       while (it.hasNext()){
         p = (Pair)it.next();
         edge = edgeMap.get(p);
         edge.request(duration);
+        totalDelay += edge.delay;
       }
-        numSuccessRequests++;
-      } else {
-        numBlockedRequests++;
-      }
+      numSuccessRequests++;
+      averageCost.add(totalDelay);
+    } else {
+      numBlockedRequests++;
+    }
     numVCRequests++;
   }
 
@@ -191,16 +216,26 @@ public class routing_performance {
         //System.out.println("specs[0]: " + specs[0]);
         char srcNode = specs[1].charAt(0);
         char destNode = specs[2].charAt(0);
-        finalEdgePath.clear();
-        Dijkstra(srcNode, destNode);
+        
+
+        //update every node's workload
         BigDecimal a = new BigDecimal(specs[0]).multiply(new BigDecimal("1000000."));
         BigDecimal b = new BigDecimal(specs[3]).multiply(new BigDecimal("1000000."));
         int expired = a.intValue() - currtime;
         int duration = b.intValue();
         currtime = a.intValue();
+        ListIterator it = edges.listIterator();  
+        Edge e;
+        while (it.hasNext()){
+          e = (Edge)it.next();
+          e.update(expired);
+        }
+
+        finalEdgePath.clear();
+        Dijkstra(srcNode, destNode);
         //traverse edges to add to workload
         updateWorkLoad(expired, duration);
-       
+        System.out.println("Finished request for " + srcNode + " " + destNode + " " + a.intValue() + " " + b.intValue()+ "\n");
       }
       br.close();
       //System.out.println("total number of virtual circuit requests: " + numVCRequests);
@@ -241,22 +276,19 @@ public class routing_performance {
       checkAdjacentNodes(node);
       //findMinimalDistances(node);
     }
-    //if (!success) {
-    //  numBlockedRequests++;
-    //}
     System.out.println("distance from " + srcNode + " to " + destNode + " : " + distances.get(destNode));
     char n = destNode;
     System.out.println("Path from " + srcNode + " to " + destNode);
     while (path.get(n) != null) {
       finalPath.add(n);
-      System.out.print(n + "<-");
+      //--->System.out.print(n + "<-");
       n = path.get(n);
     }
 
-    System.out.println(srcNode);
+   //---> System.out.println(srcNode);
     finalPath.add(srcNode);
 
-    System.out.println("FINAL PATH");
+   //---> System.out.println("FINAL PATH");
     Collections.reverse(finalPath);
     char src,dest;
     for (int i = 0; i < finalPath.size()-1; i++) {
@@ -276,10 +308,12 @@ public class routing_performance {
   public static void initialiseDistances() {
     for (char ch = 'A'; ch <= 'Z'; ch++) {
       if (routingProtocol.equals("SHP")) {
-        distances.put(ch, MAX_NODES);
+        distances.put(ch, MAX_NODES+1);
       }
       else if (routingProtocol.equals("SDP")) {
-        distances.put(ch, MAX_DELAY);
+        distances.put(ch, MAX_DELAY+1);
+      } else if (routingProtocol.equals("LLP")) {
+        distances.put(ch, MAX_CAP+1);
       }
     }
   }
@@ -314,7 +348,7 @@ public class routing_performance {
   }
 */
   public static void checkAdjacentNodes(char srcNode) {
-    System.out.println("checkAdjacentNodes");
+    //--->System.out.println("checkAdjacentNodes");
 /*
     for (Edge e : edges) {
       if (e.srcNode == srcNode && !usedNodes.contains(e.destNode)) { // then its adjacent
@@ -345,6 +379,10 @@ public class routing_performance {
           int linkCost = edgeMap.get(p).delay;
           
           newdistance = linkCost + distances.get(srcNode);
+        } else if (routingProtocol.equals("LLP")){
+          int workload = (int)((edgeMap.get(p).load * 100.) / edgeMap.get(p).capacity);
+          newdistance = workload;
+          //System.out.println("new distance: " + workload);
         }
         
         
@@ -355,7 +393,7 @@ public class routing_performance {
           path.put(ch, srcNode); // ie you get to e.destNode from srcNode
         }
         
-        System.out.println(srcNode + "->" + ch);
+        //--->System.out.println(srcNode + "->" + ch);
         //System.out.println("distance to : " + ch + " from " + srcNode + " : " + distances.get(ch));
       }
     }
@@ -384,7 +422,7 @@ class Edge {
   }
 
   public boolean isBlocked(){
-    System.out.print("isBlocked load: " + load + " capacity: " +capacity + "\n" );
+    //--->System.out.print("isBlocked load: " + load + " capacity: " +capacity + "\n" );
     return load >= capacity;  
   }
 
@@ -393,12 +431,12 @@ class Edge {
     ListIterator it = workload.listIterator();
     while (it.hasNext()){
       int curr = (Integer)it.next();
-      System.out.print("Updating curr " + curr + " - " + expired + " = " + (curr-expired) + "\n");
+      //-->>System.out.print("Updating curr for " + srcNode + " " + destNode + " " + curr + " - " + expired + " = " + (curr-expired) + "\n");
       curr -= expired;
       if (curr <= 0){
         it.remove();
         load--;
-        System.out.print("Released finished load " + srcNode + "->" + destNode +"\n");
+        //-->>System.out.print("Released finished load " + srcNode + "->" + destNode +"\n");
       } else {
         it.set(curr);
         
@@ -407,9 +445,9 @@ class Edge {
   }
 
   public void request(int duration){
-    System.out.print("load++ for edge " + srcNode + "->" + destNode + "\n");
     load++;
     workload.add(duration);
+    System.out.print("load++ for edge " + srcNode + "->" + destNode + " now " + load + "/" + capacity+ "\n" );
   }
 }
 class Pair {
