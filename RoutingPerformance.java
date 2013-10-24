@@ -134,20 +134,47 @@ public class RoutingPerformance {
         char adjNode = specs[1].charAt(0);
         int delay = Integer.parseInt(specs[2]);
         int capacity = Integer.parseInt(specs[3]);
-        Edge e1 = new Edge(node, adjNode, delay, capacity);
-        Edge e2 = new Edge(adjNode, node, delay, capacity);
-        edges.add(e1);
-        edges.add(e2);
-        Pair p1 = new Pair(node,adjNode);
-        Pair p2 = new Pair(adjNode,node);
-        edgeMap.put(p1,e1);
-        edgeMap.put(p2,e2);  
-        Pair p3 = new Pair (node,adjNode);
-/*
-        if (edgeMap.containsKey(p3)) {
-          System.out.println("CONTAINS P3");
+
+        // only want to add Pair lower Letter on the left to edgeMap
+        if (node < adjNode) {
+          Edge e1 = new Edge(node, adjNode, delay, capacity);
+          edges.add(e1);
+          Pair p1 = new Pair(node,adjNode);
+          edgeMap.put(p1,e1);
+          // put nodes in graph and nodes list
+          if (!graph.containsKey(node)) {
+            graph.put(node, new LinkedList<Edge>());
+            nodes.add(node);
+
+          }
+          graph.get(node).add(e1); 
         }
-*/
+        else {
+          Edge e2 = new Edge(adjNode, node, delay, capacity);
+          edges.add(e2);
+          Pair p2 = new Pair(adjNode,node);
+          edgeMap.put(p2,e2);
+          if (!graph.containsKey(adjNode)) {
+            graph.put(adjNode, new LinkedList<Edge>());
+            nodes.add(adjNode);
+          }
+          graph.get(adjNode).add(e2);
+        }
+/*
+        Edge e1 = new Edge(node, adjNode, delay, capacity);
+////////Edge e2 = new Edge(adjNode, node, delay, capacity);
+        edges.add(e1);
+////////edges.add(e2);
+        Pair p1 = new Pair(node,adjNode);
+////////Pair p2 = new Pair(adjNode,node);
+        edgeMap.put(p1,e1);
+////////edgeMap.put(p2,e2);  
+        Pair p3 = new Pair (node,adjNode);
+
+//        if (edgeMap.containsKey(p3)) {
+//          System.out.println("CONTAINS P3");
+//        }
+
         // put nodes in graph and nodes list
         if (!graph.containsKey(node)) {
           graph.put(node, new LinkedList<Edge>());
@@ -158,10 +185,10 @@ public class RoutingPerformance {
           graph.put(adjNode, new LinkedList<Edge>());
           nodes.add(adjNode);
         }
+*/
 
-
-        graph.get(node).add(e1); 
-        graph.get(adjNode).add(e2); // dont copy both directions to graph? 
+        //graph.get(node).add(e1); 
+////////graph.get(adjNode).add(e2); // dont copy both directions to graph? 
         //System.out.println(line);
         //numVCRequests++;
         
