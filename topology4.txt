@@ -5,3 +5,7 @@ D B 3 5
 C D 8 6
 B E 5 7
 E D 7 8
+F G 10 4
+E F 4 3
+C G 6 2
+D G 8 3
