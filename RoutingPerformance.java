@@ -16,7 +16,7 @@ public class RoutingPerformance {
   static final int MAX_NODES = 26;
   
   // Max propagation delay 
-  static final int MAX_DELAY = 200;
+  static final int MAX_DELAY = 7500;
   static final int MAX_CAP   = 100;
   public static String routingProtocol;
 
@@ -145,7 +145,6 @@ public class RoutingPerformance {
           if (!graph.containsKey(node)) {
             graph.put(node, new LinkedList<Edge>());
             nodes.add(node);
-
           }
           graph.get(node).add(e1); 
         } else {
@@ -252,7 +251,8 @@ public class RoutingPerformance {
         //update every node's workload
         BigDecimal a = new BigDecimal(specs[0]).multiply(new BigDecimal("1000000."));
         BigDecimal b = new BigDecimal(specs[3]).multiply(new BigDecimal("1000000."));
-        int expired = a.intValue();
+        
+         int expired = a.intValue();
         int duration = a.intValue() + b.intValue();
 
         ListIterator it = edges.listIterator();  
@@ -284,7 +284,7 @@ public class RoutingPerformance {
     usedNodes = new HashSet<Character>();
     unusedNodes = new HashSet<Character>();
     List<Character> finalPath = new ArrayList<Character>();
-    boolean success = false;
+    //boolean success = false;
 
     unusedNodes.add(srcNode);
     distances = new HashMap<Character, Integer>();
@@ -297,12 +297,12 @@ public class RoutingPerformance {
       
       usedNodes.add(node);
       unusedNodes.remove(node);
-      if (node == destNode) {
+      //if (node == destNode) {
         ///////////////////////////////////////////////////
         //numSuccessRequests++;
-        success = true;
+     //   success = true;
         //break;
-      }
+     //}
 
       // now add adjacent nodes to unusedNodes
       checkAdjacentNodes(node);
@@ -404,7 +404,7 @@ public class RoutingPerformance {
     }
 */  
     System.out.println("srcNode = " +srcNode);
-    for (char ch = 'A'; ch <= 'Z'; ch++) {
+    for (char ch = 'Z'; ch >= 'A'; ch--) {
       Pair p;
       if (srcNode > ch){
         //System.out.println("Swapping upper and lower -> " + srcNode + " " + ch);
@@ -419,11 +419,11 @@ public class RoutingPerformance {
           newdistance = 1 + distances.get(srcNode);
         }
         else if (routingProtocol.equals("SDP")) {
-          int linkCost = lookUp(p).delay;
+          int linkCost = edgeMap.get(p).delay;
           
           newdistance = linkCost + distances.get(srcNode);
         } else if (routingProtocol.equals("LLP")){
-          int workload = (int)((lookUp(p).load * 100.) / edgeMap.get(p).capacity);
+          int workload = (int)((edgeMap.get(p).load * 100.) / edgeMap.get(p).capacity);
           newdistance = workload;
           //System.out.println("new distance: " + workload);
         }
